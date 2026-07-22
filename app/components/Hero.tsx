@@ -1,15 +1,15 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { ArrowRight, PlayCircle, Star } from "lucide-react";
 import { AnimatedText, headlineContainer } from "./AnimatedText";
 
-const container = {
+const container : Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
 };
 
-const fadeUp = {
+const fadeUp : Variants= {
   hidden: { opacity: 0, y: 20 },
   show: {
     opacity: 1,

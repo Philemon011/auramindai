@@ -70,7 +70,7 @@ export function Navbar() {
             >
                 <div className="mx-auto grid h-20 max-w-6xl grid-cols-[auto_1fr_auto] items-center px-6 sm:px-10">
                     {/* Logo */}
-                    <a href="#" className="flex shrink-0 items-center gap-1 justify-self-start">
+                    <a href="/" className="flex shrink-0 items-center gap-1 justify-self-start">
                         {/* <Image
                             src="/logo.png"
                             alt="Logo"
@@ -181,7 +181,7 @@ export function Navbar() {
                         <div className="pointer-events-none absolute bottom-0 -left-24 h-72 w-72 rounded-full bg-accent/10 blur-[90px]" />
 
                         <div className="relative z-10 flex h-20 shrink-0 items-center justify-between px-6">
-                            <a href="#" className="flex items-center gap-1" onClick={() => setMobileOpen(false)}>
+                            <a href="/" className="flex items-center gap-1" onClick={() => setMobileOpen(false)}>
                                 {/* <Image
                                     src="/logo.png"
                                     alt="Logo"
