@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Active la variante dark: de Tailwind selon la classe "dark" sur <html> (gérée par next-themes) */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
+  /* ===== Rayons d'arrondi — identiques quel que soit le thème ===== */
+  --radius-card: 20px;
+  --radius-card-lg: 28px;
+  --radius-button: 16px;
+
+  /* ===== Familles de polices — identiques quel que soit le thème ===== */
+  --font-display: var(--font-flex-120);
+  --font-heading: var(--font-flex-72);
+  --font-subheading: var(--font-flex-36);
+  /* Poppins pour tout le texte courant et les éléments d'UI */
+--font-body: var(--font-poppins);
+--font-ui: var(--font-poppins);
+
+  /* ===== Couleurs — tokens sémantiques, la valeur change selon le thème ===== */
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-border: var(--border);
+
+  --color-contrast: var(--contrast);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ===== Mode clair (par défaut) ===== */
+:root {
+  --background: #fafafa;
+  --surface: #ffffff;
+  --foreground: #0a2540;
+  --foreground-muted: #5c6470;
+  --accent: #3b5bff;
+  --accent-soft: #eef1ff;
+  --border: #ececec;
+  --contrast: #0a2540;
+}
+
+/* ===== Mode sombre ===== */
+.dark {
+  --background: #0a0e17;
+  --surface: #10151f;
+  --foreground: #f5f7fa;
+  --foreground-muted: #9aa3b2;
+  --accent: #5b7cff;
+  --accent-soft: #1a2340;
+  --border: #1f2633;
+  --contrast: #171d2b;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-body);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+
+
+/* ===== Animation de défilement infini (marquee) ===== */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 32s linear infinite;
+}
+
+.animate-marquee-slow {
+  animation: marquee 48s linear infinite;
+}
+
+.animate-marquee-fast {
+  animation: marquee 22s linear infinite;
+}
+
+/* Cache la scrollbar pour les carrousels horizontaux (photos, avis) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+
+/* Le anneau de pulsation du bouton WhatsApp s'arrête après ses répétitions,
+   pour rester discret plutôt que de clignoter indéfiniment. */
