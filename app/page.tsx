@@ -8,16 +8,18 @@ import { About } from "./components/About";
 import { Faq } from "./components/Faq";
 import { Contact } from "./components/Contact";
 import { Footer } from "./components/Footer";
-import { WhatsAppButton } from "./components/WhatsAppButton";
 import { BackToTop } from "./components/BackToTop";
+import { getPublicMasterclasses } from "./lib/masterclasses";
 
-export default function Home() {
+export default async function Home() {
+  const masterclasses = await getPublicMasterclasses();
+
   return (
     <main>
       <Navbar />
       <Hero />
       <TrustedByMarquee />
-      <Masterclasses />
+      <Masterclasses masterclasses={masterclasses} />
       <Approach />
       <ForWho />
       <About />

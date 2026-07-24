@@ -6,7 +6,9 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { AnimatedText, headlineContainer } from "./AnimatedText";
 import { MasterclassCard } from "./MasterclassCard";
-import { masterclasses, MasterclassType } from "../data/masterclasses";
+import { PublicMasterclass } from "../lib/masterclasses-types";
+
+type MasterclassType = "free" | "paid";
 
 const filters: { label: string; value: "all" | MasterclassType }[] = [
   { label: "Toutes", value: "all" },
@@ -14,10 +16,6 @@ const filters: { label: string; value: "all" | MasterclassType }[] = [
   { label: "Payantes", value: "paid" },
 ];
 
-/**
- * Détermine combien de cartes afficher selon la largeur d'écran :
- * mobile → 3 lignes, tablette → 2 lignes (4 cartes), desktop → 2 lignes (6 cartes).
- */
 function useMaxVisible() {
   const [maxVisible, setMaxVisible] = useState(6);
 
@@ -36,14 +34,14 @@ function useMaxVisible() {
   return maxVisible;
 }
 
-export function Masterclasses() {
+export function Masterclasses({ masterclasses }: { masterclasses: PublicMasterclass[] }) {
   const [activeFilter, setActiveFilter] = useState<"all" | MasterclassType>("all");
   const maxVisible = useMaxVisible();
 
   const filtered = useMemo(() => {
     if (activeFilter === "all") return masterclasses;
     return masterclasses.filter((mc) => mc.type === activeFilter);
-  }, [activeFilter]);
+  }, [activeFilter, masterclasses]);
 
   const visible = filtered.slice(0, maxVisible);
   const hasMore = filtered.length > maxVisible;
@@ -70,46 +68,54 @@ export function Masterclasses() {
             experts qui utilisent l&apos;IA au quotidien.
           </p>
 
-          <div className="mt-10 inline-flex items-center gap-1 rounded-full border border-border bg-surface p-1">
-            {filters.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setActiveFilter(f.value)}
-                className="relative rounded-full px-5 py-2 font-body text-sm font-medium transition-colors duration-200"
-              >
-                {activeFilter === f.value && (
-                  <motion.span
-                    layoutId="filter-pill"
-                    className="absolute inset-0 rounded-full bg-accent"
-                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                  />
-                )}
-                <span
-                  className={`relative z-10 ${
-                    activeFilter === f.value ? "text-white" : "text-foreground-muted"
-                  }`}
+          {masterclasses.length > 0 && (
+            <div className="mt-10 inline-flex items-center gap-1 rounded-full border border-border bg-surface p-1">
+              {filters.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setActiveFilter(f.value)}
+                  className="relative rounded-full px-5 py-2 font-body text-sm font-medium transition-colors duration-200"
                 >
-                  {f.label}
-                </span>
-              </button>
-            ))}
-          </div>
+                  {activeFilter === f.value && (
+                    <motion.span
+                      layoutId="filter-pill"
+                      className="absolute inset-0 rounded-full bg-accent"
+                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    />
+                  )}
+                  <span
+                    className={`relative z-10 ${
+                      activeFilter === f.value ? "text-white" : "text-foreground-muted"
+                    }`}
+                  >
+                    {f.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeFilter}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {visible.map((mc) => (
-              <MasterclassCard key={mc.id} mc={mc} />
-            ))}
-          </motion.div>
-        </AnimatePresence>
+        {masterclasses.length === 0 ? (
+          <p className="mt-14 text-center font-body text-[14px] text-foreground-muted">
+            Aucune masterclass programmée pour l&apos;instant — reviens bientôt !
+          </p>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeFilter}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {visible.map((mc) => (
+                <MasterclassCard key={mc.id} mc={mc} />
+              ))}
+            </motion.div>
+          </AnimatePresence>
+        )}
 
         {hasMore && (
           <div className="mt-12 flex justify-center">

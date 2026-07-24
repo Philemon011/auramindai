@@ -1,42 +1,96 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
   ArrowLeft,
   Calendar,
   Clock,
-  Users,
   Globe2,
   Check,
-  Star,
   ArrowRight,
 } from "lucide-react";
 import { Navbar } from "../../components/Navbar";
 import { Footer } from "../../components/Footer";
 import { BackToTop } from "../../components/BackToTop";
 import { MasterclassCard } from "../../components/MasterclassCard";
-import {
-  getMasterclassById,
-  getHostById,
-  getReviewsByIds,
-  formatPrice,
-  masterclasses,
-} from "../../data/masterclasses";
+import { PublicMasterclass, formatPrice } from "../../lib/masterclasses-types";
+import { registerForMasterclass, getMyRegistration } from "../../actions/registrations";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } },
 };
 
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function formatTime(dateStr: string) {
+  return new Date(dateStr).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
 export default function MasterclassDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const mc = getMasterclassById(id);
-  const [registered, setRegistered] = useState(false);
+  const router = useRouter();
 
-  if (!mc) {
+  const [mc, setMc] = useState<PublicMasterclass | null | undefined>(undefined);
+  const [related, setRelated] = useState<PublicMasterclass[]>([]);
+  const [registration, setRegistration] = useState<{ payment_status: string } | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(true);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    async function load() {
+      const res = await fetch(`/api/masterclasses/${id}`);
+      if (!res.ok) {
+        setMc(null);
+        return;
+      }
+      const data = await res.json();
+      setMc(data.masterclass);
+      setRelated(data.related);
+    }
+    load();
+  }, [id]);
+
+  useEffect(() => {
+    getMyRegistration(id).then((result) => {
+      setRegistration(result);
+      setCheckingStatus(false);
+    });
+  }, [id]);
+
+  function handleRegister() {
+    startTransition(async () => {
+      const result = await registerForMasterclass(id);
+
+      if (result?.notAuthenticated) {
+        router.push(`/connexion?next=/masterclasses/${id}`);
+        return;
+      }
+      if (result?.alreadyRegistered) {
+        setRegistration({ payment_status: "free" });
+        return;
+      }
+      if (result?.success) {
+        setRegistration({ payment_status: result.paymentStatus ?? "free" });
+      }
+    });
+  }
+
+  if (mc === undefined) {
+    return (
+      <main>
+        <Navbar />
+        <div className="h-[60vh]" />
+      </main>
+    );
+  }
+
+  if (mc === null) {
     return (
       <main>
         <Navbar />
@@ -59,16 +113,6 @@ export default function MasterclassDetailPage() {
     );
   }
 
-  const host = getHostById(mc.hostId);
-  const reviews = getReviewsByIds(mc.reviewIds);
-  const related = masterclasses.filter((m) => m.id !== mc.id).slice(0, 3);
-
-  function handleRegister() {
-    // TODO: brancher sur Supabase (table `registrations`) une fois l'authentification en place.
-    // Si mc.type === "paid", rediriger vers le flux de paiement avant de confirmer l'inscription.
-    setRegistered(true);
-  }
-
   return (
     <main>
       <Navbar />
@@ -83,14 +127,15 @@ export default function MasterclassDetailPage() {
             Toutes les masterclasses
           </Link>
 
-          {/* Image + badges */}
           <motion.div
             initial="hidden"
             animate="show"
             variants={fadeUp}
-            className="relative mt-6 aspect-[16/7] overflow-hidden rounded-card-lg"
+            className="relative mt-6 aspect-[16/7] overflow-hidden rounded-card-lg bg-accent-soft"
           >
-            <img src={mc.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            {mc.image_url && (
+              <img src={mc.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-black/0" />
             <div className="absolute left-6 top-6 flex items-center gap-2">
               {mc.type === "free" ? (
@@ -99,7 +144,7 @@ export default function MasterclassDetailPage() {
                 </span>
               ) : (
                 <span className="rounded-full bg-foreground/90 px-3 py-1 font-body text-xs font-semibold text-white backdrop-blur-sm">
-                  {formatPrice(mc.price ?? 0)}
+                  {formatPrice(mc.price)}
                 </span>
               )}
               <span className="flex items-center gap-1 rounded-full bg-surface/95 px-2.5 py-1 font-body text-xs font-medium text-foreground-muted backdrop-blur-sm">
@@ -109,7 +154,6 @@ export default function MasterclassDetailPage() {
             </div>
           </motion.div>
 
-          {/* Titre + meta */}
           <motion.div initial="hidden" animate="show" variants={fadeUp} className="mt-8">
             <h1
               className="max-w-2xl font-heading font-semibold text-foreground"
@@ -118,150 +162,125 @@ export default function MasterclassDetailPage() {
               {mc.title}
             </h1>
             <div className="mt-4 flex flex-wrap items-center gap-5 font-body text-sm text-foreground-muted">
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5" suppressHydrationWarning>
                 <Calendar className="h-4 w-4" />
-                {mc.date}
+                {formatDate(mc.scheduled_at)}
               </span>
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5" suppressHydrationWarning>
                 <Clock className="h-4 w-4" />
-                {mc.time}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Users className="h-4 w-4" />
-                {mc.attendees} inscrits
+                {formatTime(mc.scheduled_at)}
               </span>
             </div>
           </motion.div>
 
-          {/* Contenu principal + carte latérale */}
           <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_340px]">
-            {/* Colonne gauche */}
             <div className="flex flex-col gap-12">
-              {/* Description */}
               <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} variants={fadeUp}>
                 <h2 className="font-subheading text-xl font-semibold text-foreground">À propos de cette session</h2>
                 <p className="mt-3 font-body text-[15px] leading-relaxed text-foreground-muted">{mc.description}</p>
               </motion.div>
 
-              {/* Programme */}
-              <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} variants={fadeUp}>
-                <h2 className="font-subheading text-xl font-semibold text-foreground">Programme de la session</h2>
-                <ul className="mt-5 flex flex-col gap-3">
-                  {mc.agenda.map((step, i) => (
-                    <li key={step} className="flex items-start gap-4 rounded-card border border-border bg-surface p-4">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-soft font-body text-xs font-semibold text-accent">
-                        {i + 1}
-                      </span>
-                      <span className="font-body text-[14px] leading-relaxed text-foreground">{step}</span>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-
-              {/* Prérequis */}
-              <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} variants={fadeUp}>
-                <h2 className="font-subheading text-xl font-semibold text-foreground">Pour qui, et avec quoi ?</h2>
-                <ul className="mt-5 flex flex-col gap-3">
-                  {mc.requirements.map((req) => (
-                    <li key={req} className="flex items-start gap-3">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-soft">
-                        <Check className="h-3 w-3 text-accent" strokeWidth={2.5} />
-                      </span>
-                      <span className="font-body text-[14px] text-foreground-muted">{req}</span>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-
-              {/* Intervenant */}
-              {host && (
+              {mc.agenda.length > 0 && (
                 <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} variants={fadeUp}>
-                  <h2 className="font-subheading text-xl font-semibold text-foreground">Ton intervenant</h2>
-                  <div className="mt-5 flex items-start gap-4 rounded-card-lg border border-border bg-surface p-6">
-                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent-soft font-subheading text-lg font-semibold text-accent">
-                      {host.initials}
-                    </span>
-                    <div>
-                      <p className="font-body text-[16px] font-semibold text-foreground">{host.name}</p>
-                      <p className="font-body text-[13px] text-accent">{host.role}</p>
-                      <p className="mt-2 font-body text-[14px] leading-relaxed text-foreground-muted">{host.bio}</p>
-                    </div>
-                  </div>
+                  <h2 className="font-subheading text-xl font-semibold text-foreground">Programme de la session</h2>
+                  <ul className="mt-5 flex flex-col gap-3">
+                    {mc.agenda.map((step, i) => (
+                      <li key={step} className="flex items-start gap-4 rounded-card border border-border bg-surface p-4">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-soft font-body text-xs font-semibold text-accent">
+                          {i + 1}
+                        </span>
+                        <span className="font-body text-[14px] leading-relaxed text-foreground">{step}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </motion.div>
               )}
 
-              {/* Avis */}
-              {reviews.length > 0 && (
+              {mc.requirements.length > 0 && (
                 <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} variants={fadeUp}>
-                  <h2 className="font-subheading text-xl font-semibold text-foreground">Avis de participants</h2>
-                  <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {reviews.map((review) => (
-                      <div key={review.id} className="rounded-card border border-border bg-surface p-5">
-                        <div className="flex items-center gap-0.5">
-                          {Array.from({ length: review.rating }).map((_, i) => (
-                            <Star key={i} className="h-3 w-3 fill-[#FBBF24] text-[#FBBF24]" />
-                          ))}
-                        </div>
-                        <p className="mt-2.5 font-body text-[14px] leading-relaxed text-foreground-muted">
-                          &ldquo;{review.quote}&rdquo;
-                        </p>
-                        <p className="mt-2.5 font-body text-[13px] font-medium text-foreground">{review.name}</p>
-                      </div>
+                  <h2 className="font-subheading text-xl font-semibold text-foreground">Pour qui, et avec quoi ?</h2>
+                  <ul className="mt-5 flex flex-col gap-3">
+                    {mc.requirements.map((req) => (
+                      <li key={req} className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-soft">
+                          <Check className="h-3 w-3 text-accent" strokeWidth={2.5} />
+                        </span>
+                        <span className="font-body text-[14px] text-foreground-muted">{req}</span>
+                      </li>
                     ))}
+                  </ul>
+                </motion.div>
+              )}
+
+              {mc.host_name && (
+                <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} variants={fadeUp}>
+                  <h2 className="font-subheading text-xl font-semibold text-foreground">Ton intervenant</h2>
+                  <div className="mt-5 flex items-center gap-4 rounded-card-lg border border-border bg-surface p-6">
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent-soft font-subheading text-lg font-semibold text-accent">
+                      {mc.host_name.slice(0, 2).toUpperCase()}
+                    </span>
+                    <p className="font-body text-[16px] font-semibold text-foreground">{mc.host_name}</p>
                   </div>
                 </motion.div>
               )}
             </div>
 
-            {/* Carte latérale — sticky sur desktop */}
             <motion.div initial="hidden" animate="show" variants={fadeUp} className="lg:sticky lg:top-28 lg:self-start">
               <div className="rounded-card-lg border border-border bg-surface p-7">
                 <p className="font-heading text-2xl font-semibold text-foreground">
-                  {mc.type === "free" ? "Gratuit" : formatPrice(mc.price ?? 0)}
+                  {mc.type === "free" ? "Gratuit" : formatPrice(mc.price)}
                 </p>
 
-                {registered ? (
+                {checkingStatus ? (
+                  <div className="mt-5 h-13 w-full animate-pulse rounded-button bg-background" style={{ height: "52px" }} />
+                ) : registration ? (
                   <div className="mt-5 flex flex-col items-center rounded-card bg-accent-soft py-6 text-center">
                     <Check className="h-6 w-6 text-accent" strokeWidth={2} />
-                    <p className="mt-2 font-body text-[14px] font-semibold text-foreground">Place réservée</p>
+                    <p className="mt-2 font-body text-[14px] font-semibold text-foreground">
+                      {registration.payment_status === "pending" ? "Inscription en attente" : "Place réservée"}
+                    </p>
                     <p className="mt-1 max-w-[220px] font-body text-[13px] text-foreground-muted">
-                      Tu recevras les détails de connexion avant le live.
+                      {registration.payment_status === "pending"
+                        ? "Tu recevras les instructions de paiement par email."
+                        : "Tu recevras les détails de connexion avant le live."}
                     </p>
                   </div>
                 ) : (
                   <button
                     onClick={handleRegister}
-                    className="group mt-5 flex h-13 w-full items-center justify-center gap-2 rounded-button bg-accent font-body text-[15px] font-medium text-white transition-transform duration-200 hover:scale-[1.02]"
+                    disabled={isPending}
+                    className="group mt-5 flex h-13 w-full items-center justify-center gap-2 rounded-button bg-accent font-body text-[15px] font-medium text-white transition-transform duration-200 hover:scale-[1.02] disabled:opacity-60"
                     style={{ height: "52px" }}
                   >
-                    Réserver ma place
-                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                    {isPending ? "Inscription..." : "Réserver ma place"}
+                    {!isPending && (
+                      <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                    )}
                   </button>
                 )}
 
                 <div className="mt-6 flex flex-col gap-3 border-t border-border pt-6">
                   <div className="flex items-center justify-between font-body text-[13px]">
                     <span className="text-foreground-muted">Date</span>
-                    <span className="font-medium text-foreground">{mc.date}</span>
+                    <span className="font-medium text-foreground" suppressHydrationWarning>
+                      {formatDate(mc.scheduled_at)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between font-body text-[13px]">
                     <span className="text-foreground-muted">Heure</span>
-                    <span className="font-medium text-foreground">{mc.time}</span>
+                    <span className="font-medium text-foreground" suppressHydrationWarning>
+                      {formatTime(mc.scheduled_at)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between font-body text-[13px]">
                     <span className="text-foreground-muted">Langue</span>
                     <span className="font-medium text-foreground">{mc.language === "fr" ? "Français" : "English"}</span>
-                  </div>
-                  <div className="flex items-center justify-between font-body text-[13px]">
-                    <span className="text-foreground-muted">Inscrits</span>
-                    <span className="font-medium text-foreground">{mc.attendees}</span>
                   </div>
                 </div>
               </div>
             </motion.div>
           </div>
 
-          {/* Masterclasses similaires */}
           {related.length > 0 && (
             <motion.div
               initial="hidden"
