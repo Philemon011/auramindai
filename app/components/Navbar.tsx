@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X, ArrowRight, LogOut } from "lucide-react";
+import { Menu, X, ArrowRight, LogOut, LayoutDashboard } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { createClient } from "@/lib/supabase/client";
 import { signOut } from "../actions/auth";
@@ -27,22 +27,22 @@ const mobileItem = {
   show: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } },
 };
 
-/**
- * Déduit des initiales lisibles à partir du nom complet (metadata Supabase)
- * ou, à défaut, de la première lettre de l'email.
- */
-function getInitials(user: User) {
-  const fullName = user.user_metadata?.full_name as string | undefined;
-  if (fullName) {
-    const parts = fullName.trim().split(" ");
+interface Profile {
+  full_name: string | null;
+  role: "user" | "admin";
+}
+
+function getInitials(name: string | null, email: string | undefined) {
+  if (name) {
+    const parts = name.trim().split(" ");
     const initials = parts.length > 1 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2);
     return initials.toUpperCase();
   }
-  return (user.email ?? "?")[0].toUpperCase();
+  return (email ?? "?")[0].toUpperCase();
 }
 
-function getDisplayName(user: User) {
-  return (user.user_metadata?.full_name as string | undefined) ?? user.email ?? "";
+function getDisplayName(name: string | null, email: string | undefined) {
+  return name || email || "";
 }
 
 export function Navbar() {
@@ -50,18 +50,37 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isPending, startTransition] = useTransition();
   const accountRef = useRef<HTMLDivElement>(null);
 
-  // Récupère l'utilisateur connecté au montage, puis écoute les changements
-  // de session en temps réel (connexion, déconnexion, expiration du token).
+  // Récupère l'utilisateur connecté + son profil (nom réel et rôle,
+  // toujours à jour, pas le nom figé au moment de l'inscription),
+  // puis écoute les changements de session en temps réel.
   useEffect(() => {
     const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    async function loadProfile(currentUser: User) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, role")
+        .eq("id", currentUser.id)
+        .single();
+      setProfile(data);
+    }
+
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      if (data.user) loadProfile(data.user);
+    });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        loadProfile(session.user);
+      } else {
+        setProfile(null);
+      }
     });
 
     return () => listener.subscription.unsubscribe();
@@ -99,6 +118,10 @@ export function Navbar() {
     });
   }
 
+  const dashboardHref = profile?.role === "admin" ? "/admin" : "/compte";
+  const displayName = getDisplayName(profile?.full_name ?? null, user?.email);
+  const initials = getInitials(profile?.full_name ?? null, user?.email);
+
   return (
     <>
       <header
@@ -108,19 +131,19 @@ export function Navbar() {
             : "border-b border-transparent bg-transparent"
         }`}
       >
-        <div className="mx-auto grid h-20 max-w-6xl grid-cols-[auto_1fr_auto] items-center px-6 sm:px-10">
+        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6 sm:px-10">
           {/* Logo */}
-          <a href="/" className="flex shrink-0 items-center gap-1 justify-self-start">
+          <a href="/" className="flex items-center gap-1">
             <span className="font-heading text-lg font-bold tracking-tight text-foreground">
               Auramind<span className="text-accent"> AI</span>
             </span>
           </a>
 
           {/* Liens desktop */}
-          <nav className="hidden items-center justify-self-center gap-6 whitespace-nowrap xl:flex">
+          <nav className="hidden items-center gap-9 whitespace-nowrap xl:flex">
             {navLinks.map((link) => (
               
-            <a    key={link.label}
+              <a  key={link.label}
                 href={link.href}
                 className="group relative font-body text-[14px] font-medium text-foreground-muted transition-colors duration-200 hover:text-foreground"
               >
@@ -130,98 +153,103 @@ export function Navbar() {
             ))}
           </nav>
 
-          {/* Bloc droit */}
-          <div className="flex items-center justify-self-end gap-3">
-            {/* Thème + compte — desktop */}
-            <div className="hidden items-center gap-3 xl:flex">
-              <ThemeToggle />
+          {/* CTA desktop */}
+          <div className="hidden items-center gap-6 xl:flex">
+            <ThemeToggle />
 
-              <div
-                ref={accountRef}
-                className="relative"
-                onMouseEnter={() => setAccountOpen(true)}
-                onMouseLeave={() => setAccountOpen(false)}
-              >
-                <button
-                  onClick={() => setAccountOpen((v) => !v)}
-                  aria-label="Compte"
-                  aria-expanded={accountOpen}
-                  className={`flex h-11 w-11 items-center justify-center rounded-full font-body text-[13px] font-semibold transition-colors duration-200 ${
-                    user
-                      ? "bg-accent text-white"
-                      : accountOpen
-                        ? "border border-accent/50 bg-accent/10 text-accent"
-                        : "border border-border bg-surface text-foreground hover:border-accent/40 hover:text-accent"
-                  }`}
-                >
-                  {user ? getInitials(user) : <UserIcon />}
-                </button>
-
-                <AnimatePresence>
-                  {accountOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.97 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.97 }}
-                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                      className="absolute right-0 top-[calc(100%+10px)] flex w-64 flex-col gap-1 rounded-card border border-border bg-surface p-2 shadow-[0_12px_32px_-10px_rgba(0,0,0,0.18)]"
-                    >
-                      {user ? (
-                        <>
-                          <div className="px-4 py-3">
-                            <p className="truncate font-body text-[14px] font-semibold text-foreground">
-                              {getDisplayName(user)}
-                            </p>
-                            <p className="truncate font-body text-[13px] text-foreground-muted">
-                              {user.email}
-                            </p>
-                          </div>
-                          <div className="my-1 h-px bg-border" />
-                          <button
-                            onClick={handleSignOut}
-                            disabled={isPending}
-                            className="flex items-center gap-2.5 rounded-[10px] px-4 py-3 text-left font-body text-[14px] font-medium text-foreground transition-colors duration-150 hover:bg-background disabled:opacity-60"
-                          >
-                            <LogOut className="h-4 w-4" strokeWidth={1.75} />
-                            {isPending ? "Déconnexion..." : "Se déconnecter"}
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          
-                        <a    href="/connexion"
-                            onClick={() => setAccountOpen(false)}
-                            className="rounded-[10px] px-4 py-3 font-body text-[14px] font-medium text-foreground transition-colors duration-150 hover:bg-background"
-                          >
-                            Se connecter
-                          </a>
-                          
-                         <a   href="/#masterclasses"
-                            onClick={() => setAccountOpen(false)}
-                            className="group flex items-center justify-center gap-2 rounded-[10px] bg-accent px-4 py-3 font-body text-[14px] font-semibold text-white transition-transform duration-150 hover:scale-[1.02]"
-                          >
-                            Réserver ma place
-                            <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
-                          </a>
-                        </>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {/* Thème + bouton menu — mobile */}
-            <div className="flex items-center gap-3 xl:hidden">
-              <ThemeToggle />
+            <div
+              ref={accountRef}
+              className="relative"
+              onMouseEnter={() => setAccountOpen(true)}
+              onMouseLeave={() => setAccountOpen(false)}
+            >
               <button
-                onClick={() => setMobileOpen(true)}
-                aria-label="Ouvrir le menu"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
+                onClick={() => setAccountOpen((v) => !v)}
+                aria-label="Compte"
+                aria-expanded={accountOpen}
+                className={`flex h-11 w-11 items-center justify-center rounded-full font-body text-[13px] font-semibold transition-colors duration-200 ${
+                  user
+                    ? "bg-accent text-white"
+                    : accountOpen
+                      ? "border border-accent/50 bg-accent/10 text-accent"
+                      : "border border-border bg-surface text-foreground hover:border-accent/40 hover:text-accent"
+                }`}
               >
-                <Menu className="h-4.5 w-4.5 text-foreground" />
+                {user ? initials : <UserIcon />}
               </button>
+
+              <AnimatePresence>
+                {accountOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.97 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 top-[calc(100%+10px)] flex w-64 flex-col gap-1 rounded-card border border-border bg-surface p-2 shadow-[0_12px_32px_-10px_rgba(0,0,0,0.18)]"
+                  >
+                    {user ? (
+                      <>
+                        <div className="px-4 py-3">
+                          <p className="truncate font-body text-[14px] font-semibold text-foreground">
+                            {displayName}
+                          </p>
+                          <p className="truncate font-body text-[13px] text-foreground-muted">
+                            {user.email}
+                          </p>
+                        </div>
+                        <div className="my-1 h-px bg-border" />
+                        
+                        <a  href={dashboardHref}
+                          onClick={() => setAccountOpen(false)}
+                          className="flex items-center gap-2.5 rounded-[10px] px-4 py-3 font-body text-[14px] font-medium text-foreground transition-colors duration-150 hover:bg-background"
+                        >
+                          <LayoutDashboard className="h-4 w-4" strokeWidth={1.75} />
+                          {profile?.role === "admin" ? "Dashboard admin" : "Mon tableau de bord"}
+                        </a>
+                        <button
+                          onClick={handleSignOut}
+                          disabled={isPending}
+                          className="flex items-center gap-2.5 rounded-[10px] px-4 py-3 text-left font-body text-[14px] font-medium text-foreground transition-colors duration-150 hover:bg-background disabled:opacity-60"
+                        >
+                          <LogOut className="h-4 w-4" strokeWidth={1.75} />
+                          {isPending ? "Déconnexion..." : "Se déconnecter"}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        
+                        <a  href="/connexion"
+                          onClick={() => setAccountOpen(false)}
+                          className="rounded-[10px] px-4 py-3 font-body text-[14px] font-medium text-foreground transition-colors duration-150 hover:bg-background"
+                        >
+                          Se connecter
+                        </a>
+                        
+                        <a  href="/#masterclasses"
+                          onClick={() => setAccountOpen(false)}
+                          className="group flex items-center justify-center gap-2 rounded-[10px] bg-accent px-4 py-3 font-body text-[14px] font-semibold text-white transition-transform duration-150 hover:scale-[1.02]"
+                        >
+                          Réserver ma place
+                          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                        </a>
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
+          </div>
+
+          {/* Thème + bouton menu — mobile */}
+          <div className="flex items-center gap-3 xl:hidden">
+            <ThemeToggle />
+            <button
+              onClick={() => setMobileOpen(true)}
+              aria-label="Ouvrir le menu"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
+            >
+              <Menu className="h-4.5 w-4.5 text-foreground" />
+            </button>
           </div>
         </div>
       </header>
@@ -286,20 +314,31 @@ export function Navbar() {
                 <>
                   <div className="flex items-center gap-3 rounded-button border border-border px-4" style={{ height: "56px" }}>
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent font-body text-[13px] font-semibold text-white">
-                      {getInitials(user)}
+                      {initials}
                     </span>
                     <div className="min-w-0">
                       <p className="truncate font-body text-[14px] font-semibold text-foreground">
-                        {getDisplayName(user)}
+                        {displayName}
                       </p>
                       <p className="truncate font-body text-[12px] text-foreground-muted">{user.email}</p>
                     </div>
                   </div>
+
+                  
+                  <a  href={dashboardHref}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-center gap-2 rounded-button bg-accent font-body text-[15px] font-semibold text-white shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]"
+                    style={{ height: "56px" }}
+                  >
+                    <LayoutDashboard className="h-4 w-4" strokeWidth={1.9} />
+                    {profile?.role === "admin" ? "Dashboard admin" : "Mon tableau de bord"}
+                  </a>
+
                   <button
                     onClick={handleSignOut}
                     disabled={isPending}
-                    className="flex items-center justify-center gap-2 rounded-button bg-accent font-body text-[15px] font-semibold text-white disabled:opacity-60"
-                    style={{ height: "56px" }}
+                    className="flex items-center justify-center gap-2 rounded-button border border-border font-body text-[15px] font-medium text-foreground disabled:opacity-60"
+                    style={{ height: "52px" }}
                   >
                     <LogOut className="h-4 w-4" strokeWidth={1.75} />
                     {isPending ? "Déconnexion..." : "Se déconnecter"}
@@ -308,7 +347,7 @@ export function Navbar() {
               ) : (
                 <>
                   
-                 <a   href="/connexion"
+                  <a  href="/connexion"
                     onClick={() => setMobileOpen(false)}
                     className="flex items-center justify-center gap-2 rounded-button border border-border font-body text-[15px] font-medium text-foreground"
                     style={{ height: "52px" }}
@@ -318,7 +357,7 @@ export function Navbar() {
                   </a>
 
                   
-                 <a   href="/#masterclasses"
+                  <a  href="/#masterclasses"
                     onClick={() => setMobileOpen(false)}
                     className="flex items-center justify-center gap-2 rounded-button bg-accent font-body text-[15px] font-semibold text-white shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]"
                     style={{ height: "56px" }}
@@ -336,10 +375,6 @@ export function Navbar() {
   );
 }
 
-/**
- * Petit composant local pour l'icône utilisateur générique (état déconnecté),
- * évite de garder l'import lucide-react "UserRound" utilisé une seule fois.
- */
 function UserIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-4.5 w-4.5">

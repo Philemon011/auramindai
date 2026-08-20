@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUnreadCount } from "../hooks/useUnreadCount";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   GraduationCap,
@@ -26,6 +27,7 @@ const tabs = [
 
 export function AccountMobileNav({ name, email }: { name: string; email: string }) {
   const pathname = usePathname();
+  const unreadCount = useUnreadCount();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -74,10 +76,15 @@ export function AccountMobileNav({ name, email }: { name: string; email: string 
                   className="absolute top-1 h-1 w-1 rounded-full bg-accent"
                 />
               )}
-              <Icon
-                className={`h-[19px] w-[19px] ${isActive ? "text-accent" : "text-foreground-muted"}`}
-                strokeWidth={isActive ? 2.1 : 1.8}
-              />
+                            <span className="relative">
+                <Icon
+                  className={`h-[19px] w-[19px] ${isActive ? "text-accent" : "text-foreground-muted"}`}
+                  strokeWidth={isActive ? 2.1 : 1.8}
+                />
+                {tab.href === "/compte/notifications" && unreadCount > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent" />
+                )}
+              </span>
               <span
                 className={`font-body text-[10px] font-medium ${
                   isActive ? "text-accent" : "text-foreground-muted"

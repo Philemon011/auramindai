@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Users, Globe2, Pencil } from "lucide-react";
+import { Plus, Users, Globe2, Pencil, Radio } from "lucide-react";
 import { AdminReveal, AdminRevealItem } from "../components/AdminReveal";
 import { StatusBadge } from "./components/StatusBadge";
 import { DeleteMasterclassButton } from "./components/DeleteMasterclassButton";
@@ -118,8 +118,21 @@ export default async function AdminMasterclassesPage() {
                 </div>
               </div>
 
-              {/* Actions */}
+                            {/* Actions */}
               <div className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
+                {(mc.status === "scheduled" || mc.status === "live") && (
+                  <Link
+                    href={`/admin/masterclasses/${mc.id}/live`}
+                    aria-label="Démarrer ou rejoindre le live"
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors duration-200 ${
+                      mc.status === "live"
+                        ? "bg-red-500 text-white hover:bg-red-600"
+                        : "text-foreground-muted hover:bg-accent-soft hover:text-accent"
+                    }`}
+                  >
+                    <Radio className="h-3.5 w-3.5" strokeWidth={1.9} />
+                  </Link>
+                )}
                 <Link
                   href={`/admin/masterclasses/${mc.id}`}
                   aria-label="Modifier"

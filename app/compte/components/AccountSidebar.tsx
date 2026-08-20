@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { useUnreadCount } from "../hooks/useUnreadCount";
 import {
   GraduationCap,
   PlayCircle,
@@ -27,6 +28,7 @@ const navItems = [
 
 export function AccountSidebar({ name, email }: { name: string; email: string }) {
   const pathname = usePathname();
+  const unreadCount = useUnreadCount();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -78,12 +80,17 @@ export function AccountSidebar({ name, email }: { name: string; email: string })
                 className={`relative h-4 w-4 ${isActive ? "text-accent" : "text-foreground-muted"}`}
                 strokeWidth={1.9}
               />
-              <span
-                className={`relative font-body text-[14px] font-medium ${
+                            <span
+                className={`relative flex flex-1 items-center justify-between font-body text-[14px] font-medium ${
                   isActive ? "text-accent" : "text-foreground-muted"
                 }`}
               >
                 {item.label}
+                {item.href === "/compte/notifications" && unreadCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 font-body text-[10px] font-semibold text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </span>
             </Link>
           );
