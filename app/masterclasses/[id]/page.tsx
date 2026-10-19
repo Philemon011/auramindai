@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { LiveViewer } from "./LiveViewer";
 import {
   ArrowLeft,
   Calendar,
@@ -127,32 +128,39 @@ export default function MasterclassDetailPage() {
             Toutes les masterclasses
           </Link>
 
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={fadeUp}
-            className="relative mt-6 aspect-[16/7] overflow-hidden rounded-card-lg bg-accent-soft"
-          >
-            {mc.image_url && (
-              <img src={mc.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-black/0" />
-            <div className="absolute left-6 top-6 flex items-center gap-2">
-              {mc.type === "free" ? (
-                <span className="rounded-full bg-surface/95 px-3 py-1 font-body text-xs font-semibold text-accent backdrop-blur-sm">
-                  Gratuit
-                </span>
-              ) : (
-                <span className="rounded-full bg-foreground/90 px-3 py-1 font-body text-xs font-semibold text-white backdrop-blur-sm">
-                  {formatPrice(mc.price)}
-                </span>
-              )}
-              <span className="flex items-center gap-1 rounded-full bg-surface/95 px-2.5 py-1 font-body text-xs font-medium text-foreground-muted backdrop-blur-sm">
-                <Globe2 className="h-3 w-3" />
-                {mc.language === "fr" ? "FR" : "EN"}
-              </span>
+                    {/* Live ou image statique selon le statut */}
+          {mc.status === "live" ? (
+            <div className="mt-6">
+              <LiveViewer masterclassId={mc.id} title={mc.title} />
             </div>
-          </motion.div>
+          ) : (
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={fadeUp}
+              className="relative mt-6 aspect-[16/7] overflow-hidden rounded-card-lg bg-accent-soft"
+            >
+              {mc.image_url && (
+                <img src={mc.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-black/0" />
+              <div className="absolute left-6 top-6 flex items-center gap-2">
+                {mc.type === "free" ? (
+                  <span className="rounded-full bg-surface/95 px-3 py-1 font-body text-xs font-semibold text-accent backdrop-blur-sm">
+                    Gratuit
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-foreground/90 px-3 py-1 font-body text-xs font-semibold text-white backdrop-blur-sm">
+                    {formatPrice(mc.price)}
+                  </span>
+                )}
+                <span className="flex items-center gap-1 rounded-full bg-surface/95 px-2.5 py-1 font-body text-xs font-medium text-foreground-muted backdrop-blur-sm">
+                  <Globe2 className="h-3 w-3" />
+                  {mc.language === "fr" ? "FR" : "EN"}
+                </span>
+              </div>
+            </motion.div>
+          )}
 
           <motion.div initial="hidden" animate="show" variants={fadeUp} className="mt-8">
             <h1
