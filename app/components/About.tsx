@@ -61,6 +61,12 @@ const team = [
     role: "Data & AI Specialist en formation — AURAMIND AI",
     bio: "En formation en Data et Intelligence Artificielle, il contribue au développement des initiatives technologiques d’AURAMIND AI et à la conception de solutions innovantes au service des professionnels, des entreprises et des étudiants.",
   },
+  {
+    image: "/images/team/lumiere-etounde.png",
+    name: "Lumière ETOUNDE",
+    role: "Web Developer — AURAMIND AI",
+    bio: "En charge du développement web, il contribue à la conception et à l’évolution de la plateforme AURAMIND AI. Il veille à mettre en place des fonctionnalités performantes et une expérience utilisateur intuitive pour faciliter l’accès aux masterclasses, aux formations et aux ressources proposées.",
+  },
 ];
 
 export function About() {
