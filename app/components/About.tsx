@@ -52,14 +52,14 @@ const team = [
   {
     image: "/images/team/ronel-oussou.jpeg",
     name: "Ronel OUSSOU",
-    role: "Fondateur, Étudiant Ingénieur",
-    bio: "Passionné d'IA et de transformation des données. Il a lancé sa première masterclass avec une conviction : partager la connaissance, c'est changer le monde.",
+    role: "CEO & Fondateur d’AURAMIND AI",
+    bio: "Étudiant ingénieur en Intelligence Artificielle, Ronel OUSSOU a fondé AURAMIND AI pour démocratiser l’IA et favoriser son adoption auprès des étudiants, des professionnels et des entreprises, à travers la formation et des solutions concrètes.",
   },
   {
-    image: "/images/team/sidney-hodieb.jpeg",
-    name: "Sidney HODIEB",
-    role: "Mentor, Ingénieur en Data",
-    bio: "C'est lui qui a poussé Ronel à créer AURAMIND AI. Son expertise en ingénierie des données et sa vision stratégique ont été les piliers du lancement.",
+    image: "/images/team/abdel-mama.jpeg",
+    name: "Abdel MAMA",
+    role: "Data & AI Specialist en formation — AURAMIND AI",
+    bio: "En formation en Data et Intelligence Artificielle, il contribue au développement des initiatives technologiques d’AURAMIND AI et à la conception de solutions innovantes au service des professionnels, des entreprises et des étudiants.",
   },
 ];
 
