@@ -50,13 +50,13 @@ const stats = [
 
 const team = [
   {
-    initials: "RO",
+    image: "/images/team/ronel-oussou.jpeg",
     name: "Ronel OUSSOU",
     role: "Fondateur, Étudiant Ingénieur",
     bio: "Passionné d'IA et de transformation des données. Il a lancé sa première masterclass avec une conviction : partager la connaissance, c'est changer le monde.",
   },
   {
-    initials: "SH",
+    image: "/images/team/sidney-hodieb.jpeg",
     name: "Sidney HODIEB",
     role: "Mentor, Ingénieur en Data",
     bio: "C'est lui qui a poussé Ronel à créer AURAMIND AI. Son expertise en ingénierie des données et sa vision stratégique ont été les piliers du lancement.",
@@ -219,15 +219,30 @@ export function About() {
 
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
             {team.map((member) => (
-              <motion.div key={member.name} variants={fadeUp} className="rounded-card-lg border border-border bg-surface p-8">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft font-subheading text-lg font-semibold text-accent">
-                  {member.initials}
-                </span>
-                <h4 className="mt-6 font-body text-[17px] font-semibold text-foreground">{member.name}</h4>
-                <p className="mt-0.5 font-body text-[13px] text-accent">{member.role}</p>
-                <p className="mt-4 font-body text-[14px] leading-relaxed text-foreground-muted">{member.bio}</p>
-              </motion.div>
-            ))}
+  <motion.div
+    key={member.name}
+    variants={fadeUp}
+    className="rounded-card-lg border border-border bg-surface p-8"
+  >
+    <img
+      src={member.image}
+      alt={member.name}
+      className="h-20 w-20 rounded-full object-cover object-center"
+    />
+
+    <h4 className="mt-6 font-body text-[17px] font-semibold text-foreground">
+      {member.name}
+    </h4>
+
+    <p className="mt-0.5 font-body text-[13px] text-accent">
+      {member.role}
+    </p>
+
+    <p className="mt-4 font-body text-[14px] leading-relaxed text-foreground-muted">
+      {member.bio}
+    </p>
+  </motion.div>
+))}
           </div>
         </motion.div>
 
